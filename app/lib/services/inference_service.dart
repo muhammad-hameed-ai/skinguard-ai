@@ -54,6 +54,26 @@ class InferenceService {
     // Initialise ONNX Runtime environment.
     OrtEnv.instance.init();
 
+    const required = [
+      'assets/models/melanoma_head.onnx',
+      'assets/models/cancer_head.onnx',
+      'assets/models/ood_gate.onnx',
+      'assets/models/deploy_config.json',
+      'assets/models/calibration_curves.json',
+    ];
+
+    final missing = <String>[];
+    for (final path in required) {
+      try {
+        await rootBundle.load(path);
+      } catch (_) {
+        missing.add(path);
+      }
+    }
+    if (missing.isNotEmpty) {
+      throw Exception('Missing model assets: ${missing.join(", ")}');
+    }
+
     // Load deploy config.
     final configRaw = await rootBundle.loadString(
       'assets/models/deploy_config.json',
