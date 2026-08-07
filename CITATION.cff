@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+title: "SkinGuard AI"
+message: "If you use this work, please cite it."
+type: software
+authors:
+  - family-names: Hameed
+    given-names: Muhammad
+    affiliation: "CECOS University of IT and Emerging Sciences, Peshawar"
+repository-code: "https://github.com/muhammad-hameed-ai/skinguard-ai"
+abstract: >-
+  Offline melanoma screening for smartphones. Quantifies and partially
+  closes the dermoscopy-to-clinical domain gap (AUC 0.494 to 0.778) and
+  adds out-of-distribution gating so non-lesion images are refused rather
+  than scored.
+keywords:
+  - melanoma
+  - domain adaptation
+  - on-device inference
+  - out-of-distribution detection
+  - model calibration
+license: MIT
+version: 1.0.0
+date-released: 2026-08-07

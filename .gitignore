@@ -1,0 +1,31 @@
+# Flutter
+app/build/
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/android/.gradle/
+app/android/local.properties
+app/ios/Pods/
+*.apk
+*.aab
+*.ipa
+
+# Models — distributed via Releases
+*.onnx
+*.pth
+*.pt
+
+# Data — licence prohibits redistribution
+data/
+*.csv
+!docs/**/*.csv
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
