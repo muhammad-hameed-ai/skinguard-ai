@@ -1,0 +1,89 @@
+{
+  "version": "v10",
+  "models": {
+    "ood_gate": {
+      "file": "ood_gate.onnx",
+      "purpose": "reject non-lesions before classification",
+      "classes": [
+        "valid_lesion",
+        "wound",
+        "not_lesion"
+      ],
+      "accept_threshold": 0.85,
+      "accuracy": 0.9941
+    },
+    "melanoma": {
+      "file": "melanoma_head.onnx",
+      "use_output": "logit_melanoma",
+      "purpose": "primary result \u2014 melanoma vs benign",
+      "trained_on": "dermoscopy, 15,603 images",
+      "auc": 0.9395,
+      "sensitivity": 0.9167,
+      "specificity": 0.8596,
+      "temperature": 0.322,
+      "threshold": 0.385,
+      "brier": 0.084,
+      "ece": 0.0072
+    },
+    "cancer": {
+      "file": "cancer_head.onnx",
+      "use_output": "logit_cancer",
+      "purpose": "safety check \u2014 any skin cancer, smartphone-validated",
+      "trained_on": "smartphone clinical, 1,700 images",
+      "auc": 0.7778,
+      "sensitivity": 0.7574,
+      "specificity": 0.6745,
+      "temperature": 0.3837,
+      "threshold": 0.44,
+      "brier": 0.1918
+    }
+  },
+  "preprocessing": {
+    "resize": [
+      224,
+      224
+    ],
+    "mean": [
+      0.485,
+      0.456,
+      0.406
+    ],
+    "std": [
+      0.229,
+      0.224,
+      0.225
+    ],
+    "layout": "NCHW",
+    "warning": "do NOT apply Step-1 preprocessing at inference"
+  },
+  "inference": [
+    "1. resize to 224x224, convert to RGB",
+    "2. normalise: (px/255 - mean) / std",
+    "3. run ood_gate.onnx -> softmax; reject unless p[valid] >= 0.85",
+    "4. run melanoma_head.onnx -> logit_melanoma",
+    "5. p = sigmoid(logit / temperature)",
+    "6. p_final = interp(p, calibration_curves.json['melanoma'])",
+    "7. flag melanoma if p_final >= 0.385",
+    "8. run cancer_head.onnx for the secondary safety number"
+  ],
+  "cam": {
+    "output": "cam",
+    "shape": [
+      1,
+      7,
+      7
+    ],
+    "usage": "upsample to 224, min-max normalise, overlay at 0.45 alpha",
+    "label": "Region of interest",
+    "caption": "Highlights the area that most influenced this assessment. Not a lesion outline.",
+    "peak_accuracy": 0.684,
+    "limitation": "approximately 1 in 3 overlays may be off-centre"
+  },
+  "limitations": [
+    "melanoma head trained on dermoscopy; smartphone performance unproven",
+    "cancer head is the statistically supported claim for phone photos",
+    "domain gap measured: 0.494 unadapted -> 0.778 adapted",
+    "wound rejection trained on synthetic images only",
+    "Fitzpatrick V-VI under-represented; dark-skin performance unvalidated"
+  ]
+}

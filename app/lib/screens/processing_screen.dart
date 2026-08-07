@@ -58,7 +58,15 @@ class _ProcessingScreenState extends State<ProcessingScreen>
 
       // Ensure models are ready
       if (!InferenceService.instance.isInitialized) {
-        await InferenceService.instance.initialize();
+        try {
+          await InferenceService.instance.initialize();
+        } catch (e, st) {
+          debugPrint('Model init failed: $e\n$st');
+          throw AppException(
+            'The analysis models could not be loaded.\n'
+            'Please reinstall the app.'
+          );
+        }
       }
 
       // Stage 2: Analyse
@@ -197,4 +205,11 @@ class _ProcessingScreenState extends State<ProcessingScreen>
       ),
     );
   }
+}
+
+class AppException implements Exception {
+  final String message;
+  AppException(this.message);
+  @override
+  String toString() => message;
 }
