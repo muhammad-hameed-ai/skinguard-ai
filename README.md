@@ -1,5 +1,9 @@
 <div align="center">
 
+<p align="center">
+  <img src="docs/images/icon.png" width="96" alt="SkinGuard AI">
+</p>
+
 # SkinGuard AI
 
 **Offline melanoma screening for smartphones, with out-of-distribution safety gating**
