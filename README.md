@@ -10,6 +10,7 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.x-EE4C2C?logo=pytorch)](https://pytorch.org)
 [![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS-3DDC84)](#)
 [![Release](https://img.shields.io/github/v/release/muhammad-hameed-ai/skinguard-ai?color=0B6E63)](../../releases)
+[![CI](https://github.com/muhammad-hameed-ai/skinguard-ai/actions/workflows/flutter-build.yml/badge.svg)](https://github.com/muhammad-hameed-ai/skinguard-ai/actions)
 
 **AUC 0.9395** · **Sensitivity 0.9167** · **ECE 0.0072** · **100% offline**
 
@@ -23,6 +24,12 @@
 > Not cleared by any regulatory body. Always consult a qualified dermatologist.
 
 ---
+
+<p align="center">
+  <img src="docs/images/result-high.png" width="240">
+  <img src="docs/images/rejection.png" width="240">
+  <img src="docs/images/cam.png" width="240">
+</p>
 
 ## What this is
 
@@ -61,6 +68,8 @@ isn't a lesion — and reports probabilities that are calibrated, so 77% means
 | Specificity | 0.6745 |
 
 ### Out-of-distribution gate
+
+<img src="docs/images/rejection.png" width="320" align="right" alt="Gate rejection screen">
 
 99.41% accuracy across `valid_lesion` / `wound` / `not_lesion`.
 
