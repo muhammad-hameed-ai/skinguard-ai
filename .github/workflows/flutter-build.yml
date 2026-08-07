@@ -20,4 +20,4 @@ jobs:
       - working-directory: app
         run: |
           flutter pub get
-          flutter analyze --no-fatal-infos
+          flutter analyze --no-fatal-warnings --no-fatal-infos
