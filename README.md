@@ -26,9 +26,9 @@
 ---
 
 <p align="center">
-  <img src="docs/images/result-high.png" width="240">
-  <img src="docs/images/rejection.png" width="240">
-  <img src="docs/images/cam.png" width="240">
+  <img src="docs/images/result-high.jpeg" width="240">
+  <img src="docs/images/rejection.jpeg" width="240">
+  <img src="docs/images/cam.jpeg" width="240">
 </p>
 
 ## What this is
@@ -69,7 +69,7 @@ isn't a lesion — and reports probabilities that are calibrated, so 77% means
 
 ### Out-of-distribution gate
 
-<img src="docs/images/rejection.png" width="320" align="right" alt="Gate rejection screen">
+<img src="docs/images/rejection.jpeg" width="320" align="right" alt="Gate rejection screen">
 
 99.41% accuracy across `valid_lesion` / `wound` / `not_lesion`.
 
