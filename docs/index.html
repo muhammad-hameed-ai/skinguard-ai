@@ -1,427 +1,715 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SkinGuard AI — Offline Melanoma Screening</title>
-    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg: #0b0c10;
-            --surface: #1f2833;
-            --text-main: #c5c6c7;
-            --text-heading: #ffffff;
-            --accent-teal: #66fcf1;
-            --accent-dark: #45a29e;
-            --danger: #ff4c4c;
-            --border: rgba(255, 255, 255, 0.1);
-        }
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SkinGuard AI — Offline melanoma screening with out-of-distribution gating</title>
+<meta name="description" content="Quantifying and closing the dermoscopy-to-smartphone domain gap. AUC 0.9395, ECE 0.0072, fully on-device.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0C1512; --ink2:#14211D; --ink3:#1B2A25;
+  --film:#EDF1EF; --film2:#F6F8F7; --paper:#fff;
+  --slate:#5A6B66; --slate2:#8A9995; --line:#D6DEDB; --lineDark:#22332D;
+  --ap:#0B6E63; --apLt:#12958A; --sig:#C4703C;
+  --clear:#2D6A4F; --watch:#B87333; --refer:#9B2226;
+  --maxw:1180px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Inter',system-ui,sans-serif;background:var(--film);color:var(--ink);
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;line-height:1.6;
+}
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 32px}
+.mono{font-family:'IBM Plex Mono',monospace}
+.disp{font-family:'Archivo',sans-serif;letter-spacing:-.03em}
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg);
-            color: var(--text-main);
-            line-height: 1.6;
-            margin: 0;
-            padding: 0;
-            overflow-x: hidden;
-        }
+/* ── reveal ── */
+.rv{opacity:0;transform:translateY(22px);transition:opacity .7s cubic-bezier(.2,.7,.3,1),transform .7s cubic-bezier(.2,.7,.3,1)}
+.rv.on{opacity:1;transform:none}
 
-        h1, h2, h3, h4 {
-            font-family: 'Archivo', sans-serif;
-            color: var(--text-heading);
-            margin-top: 2rem;
-            margin-bottom: 1rem;
-        }
+/* ── nav ── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  background:rgba(12,21,18,.82);backdrop-filter:blur(14px);
+  border-bottom:1px solid rgba(255,255,255,.07);transition:transform .3s;
+}
+nav .in{max-width:var(--maxw);margin:0 auto;padding:0 32px;height:60px;
+  display:flex;align-items:center;gap:28px}
+nav .brand{display:flex;align-items:center;gap:10px;margin-right:auto}
+nav .brand b{font-family:'Archivo';font-weight:800;font-size:16px;color:var(--film);letter-spacing:-.02em}
+nav a{color:rgba(237,241,239,.62);text-decoration:none;font-size:13.5px;font-weight:500;transition:color .2s}
+nav a:hover{color:var(--film)}
+nav .gh{
+  background:var(--ap);color:#fff;padding:8px 15px;border-radius:8px;font-size:13px;font-weight:600;
+}
+nav .gh:hover{background:var(--apLt);color:#fff}
+@media(max-width:820px){nav .hide{display:none}}
 
-        .mono {
-            font-family: 'IBM Plex Mono', monospace;
-        }
+/* ── aperture ── */
+.ap{position:relative;border-radius:50%;flex:none;
+  background:radial-gradient(circle at 40% 36%,#8B5E3C 0%,#6B4226 30%,#3E2415 60%,#1E0F07 100%)}
+.ap::after{content:'';position:absolute;inset:0;border-radius:50%;
+  box-shadow:inset 0 0 32px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.09)}
+.ap::before{content:'';position:absolute;left:22%;top:18%;width:58%;height:64%;
+  background:radial-gradient(ellipse at 36% 40%,rgba(18,7,3,.9) 0%,rgba(48,23,10,.66) 44%,transparent 72%);
+  border-radius:56% 44% 38% 62%/48% 56% 44% 52%}
+.ring{position:absolute;inset:-9px;border-radius:50%;border:1.5px solid rgba(255,255,255,.34)}
+.ring i{position:absolute;left:50%;width:1px;height:9px;background:rgba(255,255,255,.5);transform:translateX(-50%)}
+.ring i:first-child{top:-1px}.ring i:last-child{bottom:-1px}
 
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 4rem 2rem;
-        }
+/* ── hero ── */
+header{background:var(--ink);color:var(--film);padding:120px 0 90px;position:relative;overflow:hidden}
+header::after{content:'';position:absolute;right:-180px;top:-140px;width:620px;height:620px;
+  border-radius:50%;border:1px solid rgba(18,149,138,.16);
+  box-shadow:0 0 0 60px rgba(18,149,138,.035),inset 0 0 0 90px rgba(18,149,138,.03)}
+.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--sig);margin-bottom:22px}
+header h1{font-family:'Archivo';font-weight:800;font-size:clamp(42px,7.2vw,84px);
+  line-height:.95;letter-spacing:-.035em;max-width:14ch;position:relative}
+header .sub{margin-top:24px;max-width:56ch;font-size:17px;line-height:1.65;
+  color:rgba(237,241,239,.7);position:relative}
+.stats{display:flex;gap:52px;flex-wrap:wrap;margin-top:52px;position:relative}
+.stat .v{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:34px;
+  letter-spacing:-.03em;color:var(--film);line-height:1}
+.stat .k{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:rgba(237,241,239,.44);margin-top:9px}
+.cta{display:flex;gap:12px;margin-top:44px;flex-wrap:wrap;position:relative}
+.btn{padding:13px 22px;border-radius:10px;font-size:14px;font-weight:600;
+  text-decoration:none;transition:all .2s;display:inline-block}
+.btn.p{background:var(--ap);color:#fff}
+.btn.p:hover{background:var(--apLt);transform:translateY(-1px)}
+.btn.g{border:1px solid rgba(255,255,255,.19);color:var(--film)}
+.btn.g:hover{background:rgba(255,255,255,.06)}
+.ticks{display:flex;align-items:flex-end;gap:4px;height:12px;margin-top:56px;position:relative}
+.ticks i{width:1px;height:4px;background:rgba(255,255,255,.16)}
+.ticks i:nth-child(5n+1){height:11px;background:rgba(196,112,60,.6)}
 
-        header {
-            text-align: center;
-            margin-bottom: 6rem;
-        }
+/* ── sections ── */
+section{padding:96px 0}
+.dark{background:var(--ink);color:var(--film)}
+.hd{margin-bottom:48px;max-width:70ch}
+.hd .no{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--sig);
+  letter-spacing:.16em;font-weight:500;display:block;margin-bottom:14px}
+.hd h2{font-family:'Archivo';font-weight:700;font-size:clamp(28px,4vw,42px);
+  letter-spacing:-.028em;line-height:1.08}
+.hd p{margin-top:16px;font-size:16.5px;color:var(--slate);line-height:1.7}
+.dark .hd p{color:rgba(237,241,239,.62)}
 
-        header h1 {
-            font-size: 3.5rem;
-            font-weight: 800;
-            letter-spacing: -1px;
-            margin-bottom: 0.5rem;
-            background: linear-gradient(90deg, var(--accent-teal), #ffffff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+/* ── domain gap ── */
+.gap-viz{background:var(--ink2);border-radius:20px;padding:44px;margin-top:8px;
+  border:1px solid var(--lineDark)}
+.bar-row{margin-bottom:30px}
+.bar-row:last-child{margin-bottom:0}
+.bar-lbl{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:11px}
+.bar-lbl .n{font-size:14.5px;font-weight:500;color:rgba(237,241,239,.86)}
+.bar-lbl .v{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:20px;letter-spacing:-.02em}
+.bar{height:9px;border-radius:5px;background:rgba(255,255,255,.06);overflow:hidden;position:relative}
+.bar span{display:block;height:100%;border-radius:5px;width:0;
+  transition:width 1.5s cubic-bezier(.2,.8,.25,1)}
+.bar .mark{position:absolute;left:50%;top:-5px;bottom:-5px;width:1px;
+  background:rgba(255,255,255,.22)}
+.bar-note{font-family:'IBM Plex Mono',monospace;font-size:10.5px;
+  color:rgba(237,241,239,.36);margin-top:8px;letter-spacing:.04em}
+.chance{margin-top:26px;padding-top:22px;border-top:1px solid var(--lineDark);
+  font-size:14px;color:rgba(237,241,239,.7);line-height:1.65}
+.chance b{color:var(--film);font-weight:600}
 
-        header p.subtitle {
-            font-size: 1.25rem;
-            color: var(--text-main);
-            max-width: 600px;
-            margin: 0 auto 3rem auto;
-        }
+/* ── pipeline ── */
+.pipe{display:grid;gap:14px;margin-top:6px}
+.stage{
+  display:grid;grid-template-columns:46px 1fr auto;gap:20px;align-items:center;
+  background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:20px 22px;
+  transition:border-color .25s,transform .25s;
+}
+.stage:hover{border-color:var(--ap);transform:translateX(4px)}
+.stage .n{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;
+  color:var(--ap);width:34px;height:34px;border-radius:9px;background:var(--film);
+  display:grid;place-items:center}
+.stage h3{font-family:'Archivo';font-weight:600;font-size:16.5px;letter-spacing:-.015em;margin-bottom:4px}
+.stage p{font-size:13.5px;color:var(--slate);line-height:1.55}
+.stage .m{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--slate2);
+  text-align:right;white-space:nowrap}
+@media(max-width:700px){.stage{grid-template-columns:38px 1fr}.stage .m{display:none}}
 
-        /* Chart Styles */
-        .chart-container {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 3rem;
-            position: relative;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            margin-bottom: 4rem;
-        }
+/* ── tables ── */
+.tbl{width:100%;border-collapse:collapse;background:var(--paper);
+  border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.tbl caption{text-align:left;font-family:'IBM Plex Mono',monospace;font-size:11px;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--slate2);
+  padding-bottom:12px}
+.tbl th{text-align:left;font-family:'IBM Plex Mono',monospace;font-size:10.5px;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--slate2);
+  padding:14px 20px;background:var(--film2);border-bottom:1px solid var(--line);font-weight:500}
+.tbl td{padding:13px 20px;border-bottom:1px solid var(--line);font-size:14px}
+.tbl tr:last-child td{border-bottom:none}
+.tbl td.num{font-family:'IBM Plex Mono',monospace;font-weight:500;text-align:right}
+.tbl td.hi{font-weight:600;color:var(--ap)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:26px}
+@media(max-width:860px){.grid2{grid-template-columns:1fr}}
 
-        .chart-title {
-            text-align: center;
-            margin-top: 0;
-            margin-bottom: 3rem;
-            font-size: 1.5rem;
-        }
+/* ── confusion ── */
+.cm{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:20px}
+.cm div{border-radius:12px;padding:20px;text-align:center;border:1px solid var(--line);background:var(--paper)}
+.cm .v{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:28px;letter-spacing:-.03em}
+.cm .k{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--slate2);margin-top:6px}
+.cm .tp .v,.cm .tn .v{color:var(--clear)}
+.cm .fp .v{color:var(--watch)}
+.cm .fn .v{color:var(--refer)}
 
-        .bar-group {
-            margin-bottom: 2rem;
-            position: relative;
-        }
+/* ── findings ── */
+.find{display:grid;gap:2px;background:var(--lineDark);border-radius:16px;overflow:hidden}
+.find article{background:var(--ink2);padding:30px 32px;transition:background .25s}
+.find article:hover{background:var(--ink3)}
+.find .no{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--sig);letter-spacing:.14em}
+.find h3{font-family:'Archivo';font-weight:600;font-size:19px;margin:11px 0 10px;
+  letter-spacing:-.02em;color:var(--film)}
+.find p{font-size:14.5px;color:rgba(237,241,239,.66);line-height:1.68}
+.find code{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--apLt);
+  background:rgba(18,149,138,.09);padding:1px 6px;border-radius:4px}
 
-        .bar-label {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-            font-size: 0.95rem;
-        }
+/* ── limitations ── */
+.lim{border-left:2px solid var(--refer);padding-left:24px;margin-bottom:24px}
+.lim:last-child{margin-bottom:0}
+.lim h4{font-family:'Archivo';font-weight:600;font-size:16px;margin-bottom:7px;letter-spacing:-.015em}
+.lim p{font-size:14.5px;color:var(--slate);line-height:1.68}
 
-        .bar-value {
-            color: var(--text-heading);
-            font-weight: bold;
-        }
+/* ── code ── */
+pre{background:var(--ink);color:#C9D6D1;border-radius:14px;padding:24px;
+  overflow-x:auto;font-family:'IBM Plex Mono',monospace;font-size:13px;line-height:1.75}
+pre .c{color:#5A6B66}
+pre .k{color:var(--apLt)}
+pre .s{color:var(--sig)}
 
-        .bar-track {
-            height: 12px;
-            background: rgba(255,255,255,0.05);
-            border-radius: 6px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .bar-fill {
-            height: 100%;
-            border-radius: 6px;
-            width: 0%; /* Initial state for animation */
-            transition: width 1.5s cubic-bezier(0.2, 0.8, 0.2, 1);
-        }
-
-        .bar-fill.success {
-            background: linear-gradient(90deg, var(--accent-dark), var(--accent-teal));
-            box-shadow: 0 0 10px rgba(102, 252, 241, 0.3);
-        }
-
-        .bar-fill.danger {
-            background: linear-gradient(90deg, #8b0000, var(--danger));
-            box-shadow: 0 0 10px rgba(255, 76, 76, 0.4);
-        }
-
-        /* The 0.5 Chance Line */
-        .chance-line {
-            position: absolute;
-            left: 50%;
-            top: 5rem;
-            bottom: 2rem;
-            width: 1px;
-            background: rgba(255,255,255,0.3);
-            border-left: 1px dashed rgba(255,255,255,0.5);
-            z-index: 10;
-        }
-
-        .chance-label {
-            position: absolute;
-            left: 50%;
-            top: 3.5rem;
-            transform: translateX(-50%);
-            font-size: 0.75rem;
-            color: rgba(255,255,255,0.6);
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
-
-        /* Findings Grid */
-        .findings-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 2rem;
-            margin-bottom: 5rem;
-        }
-
-        .finding-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 2rem;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .finding-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-            border-color: rgba(255,255,255,0.2);
-        }
-
-        .finding-card.failure {
-            border-left: 4px solid var(--danger);
-        }
-        
-        .finding-card.success {
-            border-left: 4px solid var(--accent-teal);
-        }
-
-        .finding-card h4 {
-            margin-top: 0;
-            font-size: 1.1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        /* Limitations */
-        .limitations-section {
-            background: rgba(255, 76, 76, 0.05);
-            border: 1px solid rgba(255, 76, 76, 0.2);
-            border-radius: 16px;
-            padding: 3rem;
-        }
-
-        .limitation-item {
-            border-left: 3px solid var(--danger);
-            padding-left: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .limitation-item:last-child {
-            margin-bottom: 0;
-        }
-
-        .limitation-item p {
-            margin: 0;
-            font-size: 1.05rem;
-        }
-
-        /* Method */
-        .method-section {
-            margin-bottom: 5rem;
-        }
-
-        .method-step {
-            background: var(--surface);
-            border-radius: 12px;
-            padding: 2rem;
-            margin-bottom: 1.5rem;
-            border: 1px solid var(--border);
-        }
-
-        .screenshot-container {
-            margin-top: 2rem;
-            text-align: center;
-            background: #000;
-            border-radius: 8px;
-            padding: 1rem;
-        }
-
-        .screenshot-container img {
-            max-width: 100%;
-            border-radius: 4px;
-            max-height: 500px;
-        }
-
-        .screenshot-caption {
-            margin-top: 1rem;
-            font-size: 0.85rem;
-            color: rgba(255,255,255,0.6);
-            font-family: 'IBM Plex Mono', monospace;
-        }
-
-        @media (max-width: 768px) {
-            .findings-grid {
-                grid-template-columns: 1fr;
-            }
-            .chance-line {
-                display: none;
-            }
-            .chance-label {
-                display: none;
-            }
-        }
-    </style>
+/* ── footer ── */
+footer{background:var(--ink);color:rgba(237,241,239,.5);padding:64px 0 44px;
+  border-top:1px solid var(--lineDark)}
+footer .row{display:flex;justify-content:space-between;gap:32px;flex-wrap:wrap;
+  padding-bottom:36px;border-bottom:1px solid var(--lineDark)}
+footer h5{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--sig);margin-bottom:14px}
+footer a{color:rgba(237,241,239,.62);text-decoration:none;display:block;
+  font-size:14px;margin-bottom:9px;transition:color .2s}
+footer a:hover{color:var(--film)}
+footer .bot{margin-top:30px;font-size:13px;display:flex;justify-content:space-between;
+  gap:20px;flex-wrap:wrap}
+.warn{background:rgba(155,34,38,.09);border:1px solid rgba(155,34,38,.26);
+  border-radius:12px;padding:18px 22px;font-size:14px;color:rgba(237,241,239,.82);
+  line-height:1.65;margin-bottom:32px}
+.warn b{color:#E8919A}
+</style>
 </head>
 <body>
 
-    <div class="container">
-        
-        <header>
-            <h1>SkinGuard AI</h1>
-            <p class="subtitle">Offline melanoma screening for smartphones. Quantifying and closing the dermoscopy→clinical domain gap.</p>
-        </header>
+<nav>
+  <div class="in">
+    <div class="brand">
+      <div class="ap" style="width:22px;height:22px"></div>
+      <b>SkinGuard AI</b>
+    </div>
+    <a href="#finding" class="hide">Finding</a>
+    <a href="#method" class="hide">Method</a>
+    <a href="#results" class="hide">Results</a>
+    <a href="#limits" class="hide">Limitations</a>
+    <a href="https://github.com/muhammad-hameed-ai/skinguard-ai" class="gh">GitHub</a>
+  </div>
+</nav>
 
-        <!-- The Core Finding Chart -->
-        <div class="chart-container" id="chart-section">
-            <h3 class="chart-title">The Domain Gap: AUC Performance</h3>
-            
-            <div class="chance-label">Chance (0.50)</div>
-            <div class="chance-line"></div>
+<!-- ══ HERO ══ -->
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Final Year Project · CECOS University Peshawar</div>
+    <h1>Melanoma screening that knows when to refuse</h1>
+    <p class="sub">
+      Three neural networks running entirely on a phone. No image leaves the device.
+      Unlike most melanoma classifiers, this one declines to answer when the input
+      isn't a lesion — and reports probabilities you can actually trust.
+    </p>
 
-            <div class="bar-group">
-                <div class="bar-label">
-                    <span>Melanoma head on dermoscopy</span>
-                    <span class="bar-value mono">0.9395</span>
-                </div>
-                <div class="bar-track">
-                    <div class="bar-fill success" data-width="93.95%"></div>
-                </div>
-            </div>
-
-            <div class="bar-group">
-                <div class="bar-label">
-                    <span style="color: var(--danger)">Same model on smartphone photos</span>
-                    <span class="bar-value mono" style="color: var(--danger)">0.4941</span>
-                </div>
-                <div class="bar-track">
-                    <div class="bar-fill danger" data-width="49.41%"></div>
-                </div>
-            </div>
-
-            <div class="bar-group">
-                <div class="bar-label">
-                    <span>After domain adaptation (Cancer head)</span>
-                    <span class="bar-value mono">0.7778</span>
-                </div>
-                <div class="bar-track">
-                    <div class="bar-fill success" data-width="77.78%"></div>
-                </div>
-            </div>
-            
-            <p style="text-align: center; margin-top: 2rem; font-size: 0.9rem; color: var(--text-main);">
-                Dermoscopy-trained features do not transfer to smartphone photographs. An AUC of 0.4941 is a coin flip. This is why the system ships two heads.
-            </p>
-        </div>
-
-        <!-- Method Section -->
-        <div class="method-section">
-            <h2>Architecture & Method</h2>
-            <p>The system operates entirely on-device, processing images through a strict sequential cascade designed to reject invalid data before any diagnostic inference occurs.</p>
-            
-            <div class="method-step">
-                <h4>1. Deterministic Quality Check</h4>
-                <p>Laplacian variance ≥ 12 and brightness 35–225. Heavily blurred or extremely dark/blown-out images are rejected instantly.</p>
-            </div>
-
-            <div class="method-step">
-                <h4>2. Out-of-Distribution (OOD) Gate</h4>
-                <p>A MobileNetV3-Small classifier ensures the image contains a valid skin lesion. <strong>Rejection occurs before classification.</strong> An image blocked by the OOD gate never reaches either diagnostic head and therefore never receives a risk score.</p>
-                
-                <div class="screenshot-container">
-                    <!-- Placeholder for the rejection screenshot -->
-                    <img src="images/rejection.jpeg" alt="App screenshot showing a textured wall being rejected at 1.9% skin detected" onerror="this.src='data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'100%25\' height=\'300\' style=\'background:%23111;\'%3E%3Ctext x=\'50%25\' y=\'50%25\' fill=\'%23555\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-family=\'monospace\'%3E[rejection.jpg missing - place screenshot in images/ folder]%3C/text%3E%3C/svg%3E'">
-                    <div class="screenshot-caption">Verification: A textured wall blocked at 1.9% skin detected.</div>
-                </div>
-            </div>
-
-            <div class="method-step">
-                <h4>3. Dual-Head Classification</h4>
-                <p>An EfficientNet-B2 backbone with two separate heads. The melanoma head is the headline diagnostic number (despite unproven smartphone performance), while the cancer head is the statistically supported claim for phone photos.</p>
-            </div>
-        </div>
-
-        <!-- Findings Section -->
-        <h2>Six findings, including three failures</h2>
-        <p style="margin-bottom: 2rem;">Reporting what was tried and rejected is what makes the accepted choices credible.</p>
-        
-        <div class="findings-grid">
-            <div class="finding-card failure">
-                <h4>INT8 Quantisation Fails</h4>
-                <p>Evaluated and rejected: EfficientNet's squeeze-excitation blocks are unsupported by dynamic quantisation, producing a model 0.16 AUC worse and 10× slower.</p>
-            </div>
-            <div class="finding-card failure">
-                <h4>ABCD Features Do Not Transfer</h4>
-                <p>Classical hand-crafted features were evaluated and found not to transfer across imaging domains (AUC 0.691 on dermoscopy vs 0.488 on smartphone).</p>
-            </div>
-            <div class="finding-card failure">
-                <h4>Catastrophic Forgetting</h4>
-                <p>Clinical fine-tuning came at a measurable cost of a 0.056 AUC drop on the primary dermoscopy task, necessitating separate deployed heads.</p>
-            </div>
-            <div class="finding-card success">
-                <h4>Train/Test Leakage is Pervasive</h4>
-                <p>1,293 duplicates spanned both partitions across the public datasets. Removing them changed a memorisation-inflated result into a defensible one.</p>
-            </div>
-            <div class="finding-card success">
-                <h4>Clinical Sharpness Validated</h4>
-                <p>Standard photography sharpness thresholds destroy dermoscopy datasets. A Laplacian variance ≥ 50 rejects ~50% of valid images. The validated value is 12.</p>
-            </div>
-            <div class="finding-card success">
-                <h4>Exceptional Calibration</h4>
-                <p>Isotonic Regression reduced Expected Calibration Error from 0.2235 to 0.0072 — a 31-fold improvement. A displayed 77% corresponds to an observed rate of 78%.</p>
-            </div>
-        </div>
-
-        <!-- Limitations Section -->
-        <div class="limitations-section">
-            <h2 style="margin-top: 0; margin-bottom: 2.5rem;">Limitations</h2>
-            
-            <div class="limitation-item">
-                <p><strong>Melanoma head is dermoscopy-validated.</strong> Smartphone performance is unproven; the cancer head is the supported claim for phone photos.</p>
-            </div>
-            
-            <div class="limitation-item">
-                <p><strong>Cancer head is a stratifier</strong>, not a calibrated probability (Brier 0.19, fitted on only 447 images).</p>
-            </div>
-            
-            <div class="limitation-item">
-                <p><strong>Fitzpatrick types V and VI are represented by 10 and 1 images respectively.</strong> Performance on darker skin cannot be claimed — a genuine gap for a Pakistan deployment.</p>
-            </div>
-            
-            <div class="limitation-item">
-                <p><strong>Wound rejection trained on synthetic images only.</strong> Real wound photographs were not available.</p>
-            </div>
-            
-            <div class="limitation-item">
-                <p><strong>CAM peak localisation 68.4%.</strong> Roughly 1 in 3 overlays may be off-centre.</p>
-            </div>
-            
-            <div class="limitation-item">
-                <p><strong>PAD-UFES-20 contains only 47 melanoma images</strong> after QC — the reason the clinical task was reframed as cancer vs non-cancer.</p>
-            </div>
-        </div>
-        
-        <footer style="margin-top: 6rem; text-align: center; color: rgba(255,255,255,0.4); font-size: 0.9rem;">
-            <p>CECOS University of IT & Emerging Sciences, Peshawar · 2026</p>
-        </footer>
-
+    <div class="stats">
+      <div class="stat"><div class="v" data-count="0.9395">0.0000</div><div class="k">ROC-AUC</div></div>
+      <div class="stat"><div class="v" data-count="0.9167">0.0000</div><div class="k">Sensitivity</div></div>
+      <div class="stat"><div class="v" data-count="0.0072" data-dp="4">0.0000</div><div class="k">Calibration error</div></div>
+      <div class="stat"><div class="v">100%</div><div class="k">Offline</div></div>
     </div>
 
-    <!-- Animation Script -->
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const fills = entry.target.querySelectorAll('.bar-fill');
-                        fills.forEach(fill => {
-                            // Slight delay for dramatic effect
-                            setTimeout(() => {
-                                fill.style.width = fill.getAttribute('data-width');
-                            }, 300);
-                        });
-                        observer.unobserve(entry.target);
-                    }
-                });
-            }, { threshold: 0.5 });
+    <div class="cta">
+      <a class="btn p" href="https://github.com/muhammad-hameed-ai/skinguard-ai">View source</a>
+      <a class="btn g" href="#finding">Read the finding</a>
+    </div>
 
-            observer.observe(document.getElementById('chart-section'));
-        });
-    </script>
+    <div class="ticks" id="ticks"></div>
+  </div>
+</header>
+
+<!-- ══ THE FINDING ══ -->
+<section class="dark" id="finding">
+  <div class="wrap">
+    <div class="hd rv">
+      <span class="no">01 — THE FINDING</span>
+      <h2>Dermoscopy models do not work on phone photos</h2>
+      <p>
+        A dermoscope presses against the skin with polarised light and roughly ten times
+        magnification. A phone camera does none of that. The distributions are different
+        enough that a model trained on one performs at chance on the other — and almost
+        nobody measures it.
+      </p>
+    </div>
+
+    <div class="gap-viz rv">
+      <div class="bar-row">
+        <div class="bar-lbl">
+          <span class="n">Melanoma head on dermoscopy</span>
+          <span class="v" style="color:var(--clear)">0.9395</span>
+        </div>
+        <div class="bar"><span data-w="93.95" style="background:var(--clear)"></span><i class="mark"></i></div>
+        <div class="bar-note">2,832 held-out images · the domain it was trained on</div>
+      </div>
+
+      <div class="bar-row">
+        <div class="bar-lbl">
+          <span class="n">Same model on smartphone photos</span>
+          <span class="v" style="color:var(--refer)">0.4941</span>
+        </div>
+        <div class="bar"><span data-w="49.41" style="background:var(--refer)"></span><i class="mark"></i></div>
+        <div class="bar-note">no adaptation · 0.50 is a coin flip</div>
+      </div>
+
+      <div class="bar-row">
+        <div class="bar-lbl">
+          <span class="n">After domain adaptation</span>
+          <span class="v" style="color:var(--apLt)">0.7778</span>
+        </div>
+        <div class="bar"><span data-w="77.78" style="background:var(--apLt)"></span><i class="mark"></i></div>
+        <div class="bar-note">2,147 clinical images · cancer vs non-cancer</div>
+      </div>
+
+      <div class="chance">
+        The centre line marks 0.50 — random guessing. An unadapted dermoscopy model
+        lands almost exactly on it. <b>This is why the system ships two heads:</b> the
+        melanoma head is the primary output but is validated only on dermoscopy; the
+        cancer head is the statistically supported claim for phone photographs.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ METHOD ══ -->
+<section id="method">
+  <div class="wrap">
+    <div class="hd rv">
+      <span class="no">02 — METHOD</span>
+      <h2>Four stages, and any of them can stop the chain</h2>
+      <p>
+        Rejection happens before classification. An image blocked by the gate never
+        reaches either diagnostic head, so it never receives a risk score at all.
+      </p>
+    </div>
+
+    <div class="pipe">
+      <div class="stage rv">
+        <div class="n">00</div>
+        <div>
+          <h3>Quality check</h3>
+          <p>Laplacian variance and exposure, computed on-device in about 20 ms.
+             Rejection names the failing metric rather than showing a generic error.</p>
+        </div>
+        <div class="m">≥ 12 · 35–225</div>
+      </div>
+
+      <div class="stage rv">
+        <div class="n">01</div>
+        <div>
+          <h3>Out-of-distribution gate</h3>
+          <p>MobileNetV3-Small classifies valid lesion, wound, or not-a-lesion.
+             Verified on device: a textured wall that passed every quality check was
+             blocked at 1.9% skin detected.</p>
+        </div>
+        <div class="m">99.41% · ≥ 0.85</div>
+      </div>
+
+      <div class="stage rv">
+        <div class="n">02</div>
+        <div>
+          <h3>Melanoma head</h3>
+          <p>EfficientNet-B2 with GeM pooling and squeeze-excitation. Produces the
+             primary probability plus a forward-only class activation map.</p>
+        </div>
+        <div class="m">AUC 0.9395</div>
+      </div>
+
+      <div class="stage rv">
+        <div class="n">03</div>
+        <div>
+          <h3>Cancer head</h3>
+          <p>The same backbone, domain-adapted on smartphone images. Covers basal and
+             squamous cell carcinoma as well as melanoma.</p>
+        </div>
+        <div class="m">AUC 0.7778</div>
+      </div>
+    </div>
+
+    <div style="margin-top:52px" class="rv">
+      <div class="hd" style="margin-bottom:26px">
+        <h2 style="font-size:26px">Calibration</h2>
+        <p>Temperature scaling followed by isotonic regression. Both stages are
+           required — the decision thresholds were tuned on the isotonic output.</p>
+      </div>
+      <pre><span class="c"># two stages, both mandatory</span>
+p = <span class="k">sigmoid</span>(logit / temperature)      <span class="c"># temperature scaling</span>
+p = <span class="k">interpolate</span>(p, isotonic_curve)    <span class="c"># isotonic regression</span>
+
+<span class="c"># Expected Calibration Error   0.2235 → 0.0072   (31× better)</span>
+<span class="c"># A displayed 77% corresponds to an observed rate of 78%.</span></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ══ RESULTS ══ -->
+<section style="background:var(--film2)" id="results">
+  <div class="wrap">
+    <div class="hd rv">
+      <span class="no">03 — RESULTS</span>
+      <h2>Measured on 2,832 held-out images</h2>
+      <p>
+        After removing 1,293 images that appeared in both the training and test
+        partitions. Each of those was a free correct answer at evaluation time.
+      </p>
+    </div>
+
+    <div class="grid2">
+      <div class="rv">
+        <table class="tbl">
+          <caption>Melanoma classifier · dermoscopy · n = 2,832</caption>
+          <tr><th>Metric</th><th style="text-align:right">Value</th></tr>
+          <tr><td>ROC-AUC</td><td class="num hi">0.9395</td></tr>
+          <tr><td>Sensitivity</td><td class="num hi">0.9167</td></tr>
+          <tr><td>Specificity</td><td class="num">0.8596</td></tr>
+          <tr><td>F1 score</td><td class="num">0.8893</td></tr>
+          <tr><td>Brier score</td><td class="num">0.0840</td></tr>
+          <tr><td>Expected calibration error</td><td class="num hi">0.0072</td></tr>
+          <tr><td>Diagnostic odds ratio</td><td class="num">67.4</td></tr>
+        </table>
+
+        <div style="margin-top:24px">
+          <div class="mono" style="font-size:10.5px;letter-spacing:.14em;
+               text-transform:uppercase;color:var(--slate2);margin-bottom:4px">
+            Confusion matrix at threshold 0.385</div>
+          <div class="cm">
+            <div class="tp"><div class="v">1277</div><div class="k">True positive</div></div>
+            <div class="fp"><div class="v">198</div><div class="k">False positive</div></div>
+            <div class="fn"><div class="v">116</div><div class="k">False negative</div></div>
+            <div class="tn"><div class="v">1237</div><div class="k">True negative</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rv">
+        <table class="tbl" style="margin-bottom:24px">
+          <caption>Cancer classifier · smartphone · n = 447</caption>
+          <tr><th>Metric</th><th style="text-align:right">Value</th></tr>
+          <tr><td>ROC-AUC</td><td class="num">0.7778</td></tr>
+          <tr><td>Sensitivity</td><td class="num">0.7574</td></tr>
+          <tr><td>Specificity</td><td class="num">0.6745</td></tr>
+        </table>
+
+        <table class="tbl" style="margin-bottom:24px">
+          <caption>Cross-validation stability</caption>
+          <tr><th>Fold</th><th style="text-align:right">AUC</th></tr>
+          <tr><td>Fold 1</td><td class="num">0.9425</td></tr>
+          <tr><td>Fold 2</td><td class="num">0.9436</td></tr>
+          <tr><td>Fold 3</td><td class="num">0.9439</td></tr>
+          <tr><td><b>σ</b></td><td class="num hi">0.0006</td></tr>
+        </table>
+
+        <table class="tbl">
+          <caption>Quality control</caption>
+          <tr><th>Stage</th><th style="text-align:right">Removed</th></tr>
+          <tr><td>Out of focus, clipped</td><td class="num">1,965</td></tr>
+          <tr><td>Near-duplicates (pHash)</td><td class="num">3,594</td></tr>
+          <tr><td>Train/test leakage</td><td class="num hi">1,293</td></tr>
+          <tr><td><b>Usable images</b></td><td class="num"><b>20,582</b></td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ FINDINGS ══ -->
+<section class="dark">
+  <div class="wrap">
+    <div class="hd rv">
+      <span class="no">04 — WHAT WE LEARNED</span>
+      <h2>Six findings, including three failures</h2>
+      <p>
+        Reporting what did not work is what makes the rest credible.
+      </p>
+    </div>
+
+    <div class="find">
+      <article class="rv">
+        <div class="no">01</div>
+        <h3>Train/test leakage is pervasive and rarely checked</h3>
+        <p>1,293 images appeared in both partitions. Removing them converted a
+           memorisation-inflated result into a defensible one. Perceptual-hash
+           deduplication also removed 3,594 near-duplicates — Bhavesh and ISIC draw
+           from the same archive under different filenames.</p>
+      </article>
+
+      <article class="rv">
+        <div class="no">02</div>
+        <h3>Standard sharpness thresholds destroy dermoscopy datasets</h3>
+        <p>Laplacian variance <code>≥ 50</code>, the photography default, rejects roughly
+           half of all dermoscopic images. A lesion is a smooth region on smooth skin,
+           and immersion fluid removes surface texture. The validated value is
+           <code>12</code>.</p>
+      </article>
+
+      <article class="rv">
+        <div class="no">03</div>
+        <h3>Hand-crafted ABCD features do not transfer across domains</h3>
+        <p>AUC 0.691 on dermoscopy, <code>0.488</code> on smartphone — with border scores
+           saturating at 7.34 out of 8 for <em>both</em> classes. Classical dermatology
+           criteria are domain-specific in a way not previously quantified.</p>
+      </article>
+
+      <article class="rv">
+        <div class="no">04</div>
+        <h3>Catastrophic forgetting is measurable and consequential</h3>
+        <p>Fine-tuning on clinical images cost <code>0.056 AUC</code> on the dermoscopy
+           task, from 0.9395 to 0.8837. This is why each head deploys as a separate
+           checkpoint rather than one shared model.</p>
+      </article>
+
+      <article class="rv">
+        <div class="no">05</div>
+        <h3>INT8 quantisation fails on EfficientNet</h3>
+        <p>Squeeze-excitation blocks and SiLU activations are unsupported by dynamic
+           quantisation. The runtime inserted dequantise–float–requantise wrappers around
+           every unsupported node: <code>0.16 AUC worse</code> and <code>10× slower</code>.
+           Shipped fp32.</p>
+      </article>
+
+      <article class="rv">
+        <div class="no">06</div>
+        <h3>The domain gap can be measured and largely closed</h3>
+        <p>AUC <code>0.494 → 0.778</code> on smartphone images through staged adaptation:
+           backbone adaptation on all 2,147 clinical images, then head recalibration.
+           The starting point being exactly chance is the cleanest possible demonstration
+           that the features did not transfer.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ══ LIMITATIONS ══ -->
+<section id="limits">
+  <div class="wrap">
+    <div class="hd rv">
+      <span class="no">05 — LIMITATIONS</span>
+      <h2>What this system cannot do</h2>
+      <p>
+        Stated here and inside the app itself, not buried in a settings screen.
+      </p>
+    </div>
+
+    <div style="max-width:76ch">
+      <div class="lim rv">
+        <h4>Smartphone melanoma performance is unproven</h4>
+        <p>The melanoma head is validated on dermoscopy only. For phone photographs the
+           cancer head is the statistically supported output, and the interface says so
+           beneath the primary figure.</p>
+      </div>
+
+      <div class="lim rv">
+        <h4>Dark skin performance is unvalidated</h4>
+        <p>Fitzpatrick types V and VI are represented by 10 and 1 images respectively.
+           Performance on darker skin cannot be claimed — a genuine gap for a Pakistan
+           deployment, where most users are types IV–V.</p>
+      </div>
+
+      <div class="lim rv">
+        <h4>The cancer head is a stratifier, not a probability</h4>
+        <p>Brier score 0.19, fitted on 447 images. Treat the number as a band rather
+           than a precise figure.</p>
+      </div>
+
+      <div class="lim rv">
+        <h4>Wound rejection uses synthetic training data</h4>
+        <p>Real wound photographs were unavailable. Synthetic inflamed-tissue images
+           were generated instead; validation on genuine wounds is required before any
+           clinical use.</p>
+      </div>
+
+      <div class="lim rv">
+        <h4>Heatmap localisation is 68.4%</h4>
+        <p>Roughly one overlay in three may be off-centre. Presented as a region of
+           interest with soft blur, never as a lesion boundary.</p>
+      </div>
+
+      <div class="lim rv">
+        <h4>Macro non-lesion textures are untested</h4>
+        <p>Out-of-distribution negatives were object and scene photography at normal
+           viewing distance. Macro textures with pigmented-lesion colour palettes —
+           corroded metal, bark, mineral surfaces — were not represented.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ REPRODUCE ══ -->
+<section style="background:var(--film2)">
+  <div class="wrap">
+    <div class="hd rv">
+      <span class="no">06 — REPRODUCE</span>
+      <h2>Roughly six GPU-hours on a single T4</h2>
+      <p>
+        Datasets carry licences permitting research use but not redistribution, so
+        acquisition is scripted rather than bundled.
+      </p>
+    </div>
+
+    <div class="grid2">
+      <div class="rv">
+        <pre><span class="c"># train</span>
+cd ml
+pip install -r requirements.txt
+
+python 01_data_quality.py   <span class="c"># QC, dedup, leakage</span>
+python 02_ood_gate.py       <span class="c"># ~30 min</span>
+python 04_classifier.py     <span class="c"># ~5 h, 3-fold</span>
+python 05_calibration.py    <span class="c"># temp + isotonic</span>
+python 06_export_onnx.py    <span class="c"># export + verify</span></pre>
+      </div>
+
+      <div class="rv">
+        <pre><span class="c"># build the app</span>
+git clone https://github.com/muhammad-hameed-ai/skinguard-ai
+cd skinguard-ai/app
+
+<span class="c"># models come from Releases, not the repo</span>
+curl -L -o models.zip \
+  <span class="s">.../releases/latest/download/models.zip</span>
+unzip models.zip -d assets/models/
+
+flutter pub get
+flutter run</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ FOOTER ══ -->
+<footer>
+  <div class="wrap">
+    <div class="warn">
+      <b>Screening aid only. Not a diagnosis.</b> This system is not cleared by any
+      regulatory body and is not a substitute for examination by a qualified
+      dermatologist. If you are concerned about a skin lesion, see a doctor.
+    </div>
+
+    <div class="row">
+      <div style="max-width:34ch">
+        <div style="display:flex;align-items:center;gap:11px;margin-bottom:13px">
+          <div class="ap" style="width:30px;height:30px"></div>
+          <b class="disp" style="font-weight:800;font-size:17px;color:var(--film)">SkinGuard AI</b>
+        </div>
+        <p style="font-size:14px;line-height:1.65">
+          Offline melanoma screening with out-of-distribution safety gating.
+          Final Year Project, 2026.
+        </p>
+      </div>
+
+      <div>
+        <h5>Project</h5>
+        <a href="https://github.com/muhammad-hameed-ai/skinguard-ai">Source code</a>
+        <a href="https://github.com/muhammad-hameed-ai/skinguard-ai/releases">Models &amp; APK</a>
+        <a href="https://github.com/muhammad-hameed-ai/skinguard-ai/tree/main/docs">Documentation</a>
+      </div>
+
+      <div>
+        <h5>Institution</h5>
+        <p style="font-size:14px;line-height:1.75">
+          CECOS University of IT<br>&amp; Emerging Sciences<br>Peshawar, Pakistan
+        </p>
+      </div>
+
+      <div>
+        <h5>Supervision</h5>
+        <p style="font-size:14px;line-height:1.75">
+          Dr. Nazir Jan<br>Mr. Asad Javed
+        </p>
+      </div>
+    </div>
+
+    <div class="bot">
+      <span class="mono" style="font-size:12px">MIT licensed · Datasets retain original licences</span>
+      <span class="mono" style="font-size:12px">Muhammad Hameed · 2026</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+// calibration ticks
+const t = document.getElementById('ticks');
+for (let i = 0; i < 42; i++) t.appendChild(document.createElement('i'));
+
+// scroll reveal
+const io = new IntersectionObserver((es) => {
+  es.forEach((e, i) => {
+    if (e.isIntersecting) {
+      setTimeout(() => e.target.classList.add('on'), i * 70);
+      io.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.12, rootMargin: '0px 0px -60px' });
+document.querySelectorAll('.rv').forEach(el => io.observe(el));
+
+// animated counters
+const cio = new IntersectionObserver((es) => {
+  es.forEach(e => {
+    if (!e.isIntersecting) return;
+    const el = e.target;
+    const target = parseFloat(el.dataset.count);
+    const dp = parseInt(el.dataset.dp || '4');
+    const dur = 1400, t0 = performance.now();
+    const step = (now) => {
+      const p = Math.min((now - t0) / dur, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      el.textContent = (target * eased).toFixed(dp);
+      if (p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+    cio.unobserve(el);
+  });
+}, { threshold: 0.5 });
+document.querySelectorAll('[data-count]').forEach(el => cio.observe(el));
+
+// bar fills
+const bio = new IntersectionObserver((es) => {
+  es.forEach(e => {
+    if (!e.isIntersecting) return;
+    e.target.querySelectorAll('.bar span').forEach((b, i) => {
+      setTimeout(() => b.style.width = b.dataset.w + '%', i * 180);
+    });
+    bio.unobserve(e.target);
+  });
+}, { threshold: 0.3 });
+document.querySelectorAll('.gap-viz').forEach(el => bio.observe(el));
+
+// hide nav on scroll down
+let last = 0;
+const nav = document.querySelector('nav');
+addEventListener('scroll', () => {
+  const y = scrollY;
+  nav.style.transform = (y > last && y > 200) ? 'translateY(-100%)' : 'none';
+  last = y;
+}, { passive: true });
+</script>
+
 </body>
 </html>
