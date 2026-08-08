@@ -29,47 +29,47 @@ class _SplashScreenState extends State<SplashScreen>
   late Animation<double> _fadeAnim;
   String _status = '';
 
+  late DateTime _startTime;
+  static const _minSplash = Duration(milliseconds: 2200);
+  String? _error;
+
   @override
   void initState() {
     super.initState();
+    _startTime = DateTime.now();
     _fadeCtrl = AnimationController(
       vsync: this, duration: const Duration(milliseconds: 800));
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeIn);
     _fadeCtrl.forward();
-    _loadAndNavigate();
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) => _boot());
   }
 
-  Future<void> _loadAndNavigate() async {
-    final start = DateTime.now();
+  Future<void> _boot() async {
+    try {
+      GoogleFonts.archivo();
+      GoogleFonts.inter();
+      GoogleFonts.ibmPlexMono();
 
-    // Preload Google Fonts so nothing shifts on first paint
-    GoogleFonts.archivo();
-    GoogleFonts.inter();
-    GoogleFonts.ibmPlexMono();
-
-    // Kick off model initialization in the background so the app opens instantly.
-    // The ProcessingScreen will wait for this to finish if the user scans immediately.
-    InferenceService.instance.initialize().then((_) {
-      InferenceService.instance.warmUp().catchError((e) {
-        debugPrint('Splash warmup error: $e');
-      });
-    }).catchError((e) {
-      debugPrint('Splash init error: $e');
-    });
-
-    // Ensure minimum 1.2s display for the animation
-    final elapsed = DateTime.now().difference(start).inMilliseconds;
-    if (elapsed < 1200) {
-      await Future.delayed(Duration(milliseconds: 1200 - elapsed));
+      await InferenceService.instance.initialize();
+      await InferenceService.instance.warmUp();
+    } catch (e, s) {
+      debugPrint('Startup failed: $e\n$s');
+      if (mounted) setState(() => _error = 'Startup failed. Please reinstall.');
+      return;
     }
 
-    if (!mounted) return;
+    final elapsed = DateTime.now().difference(_startTime);
+    final remaining = _minSplash - elapsed;
+    if (remaining > Duration.zero) await Future.delayed(remaining);
 
-    // Check if onboarding was completed
+    if (!mounted) return;
+    _navigateOnward();
+  }
+
+  Future<void> _navigateOnward() async {
     final prefs = await SharedPreferences.getInstance();
     final onboarded = prefs.getBool('onboarding_complete') ?? false;
-
-    // Check if user has a session
     final hasSession = await AuthService.instance.restoreSession();
 
     if (!mounted) return;
@@ -124,13 +124,20 @@ class _SplashScreenState extends State<SplashScreen>
               ),
               const SizedBox(height: 40),
 
-              const SizedBox(
-                width: 24, height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: AppTheme.apertureLt,
+              if (_error != null)
+                Text(
+                  _error!,
+                  style: AppTheme.body(size: 14, color: AppTheme.refer),
+                  textAlign: TextAlign.center,
+                )
+              else
+                const SizedBox(
+                  width: 24, height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppTheme.apertureLt,
+                  ),
                 ),
-              ),
             ],
           ),
         ),

@@ -15,6 +15,7 @@ import '../widgets/aperture_view.dart';
 import '../services/auth_service.dart';
 import '../services/inference_service.dart';
 import '../services/database_service.dart';
+import '../services/image_storage.dart';
 import 'processing_screen.dart';
 import 'history_screen.dart';
 import 'profile_screen.dart';
@@ -69,9 +70,12 @@ class _ScanTab extends StatelessWidget {
     final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 100);
     if (picked == null || !context.mounted) return;
 
+    final stored = await ImageStorage.persist(File(picked.path));
+    if (!context.mounted) return;
+
     Navigator.push(context,
       MaterialPageRoute(
-        builder: (_) => ProcessingScreen(imageFile: File(picked.path)),
+        builder: (_) => ProcessingScreen(imageFile: stored),
       ),
     );
   }

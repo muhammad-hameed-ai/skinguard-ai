@@ -50,6 +50,17 @@ svg_fg = """<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" v
   </g>
 </svg>"""
 
+svg_splash = """<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <radialGradient id="lesionGrad" cx="500" cy="500" r="300" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#C4703C"/>
+      <stop offset="100%" stop-color="#8E4A22"/>
+    </radialGradient>
+  </defs>
+  <circle cx="512" cy="512" r="400" fill="none" stroke="#EDF1EF" stroke-width="26"/>
+  <path d="M500,300 C596,292 662,352 664,442 C666,506 634,542 646,602 C658,668 594,706 520,704 C444,702 372,674 340,616 C302,548 322,462 368,406 C408,356 446,306 500,300 Z" fill="url(#lesionGrad)"/>
+</svg>"""
+
 def render_svg_str(svg_content, png_path, size=1024):
     renderer = QSvgRenderer(svg_content.encode('utf-8'))
     image = QImage(size, size, QImage.Format_ARGB32)
@@ -71,3 +82,4 @@ if __name__ == '__main__':
     render_svg_str(svg_icon, 'app/assets/icon/icon_1024.png')
     render_svg_str(svg_bg, 'app/assets/icon/adaptive_bg.png')
     render_svg_str(svg_fg, 'app/assets/icon/adaptive_fg.png')
+    render_svg_str(svg_splash, 'app/assets/icon/splash_logo.png', 320)

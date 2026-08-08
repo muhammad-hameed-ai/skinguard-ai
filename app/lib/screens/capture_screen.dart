@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:image_picker/image_picker.dart';
 import '../theme/app_theme.dart';
+import '../services/image_storage.dart';
 import 'processing_screen.dart';
 import 'dart:math' as math;
 
@@ -124,9 +125,11 @@ class _CaptureScreenState extends State<CaptureScreen> with WidgetsBindingObserv
     _processImage(File(picked.path));
   }
 
-  void _processImage(File file) {
+  Future<void> _processImage(File file) async {
+    final stored = await ImageStorage.persist(file);
+    if (!mounted) return;
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => ProcessingScreen(imageFile: file)),
+      MaterialPageRoute(builder: (_) => ProcessingScreen(imageFile: stored)),
     );
   }
 

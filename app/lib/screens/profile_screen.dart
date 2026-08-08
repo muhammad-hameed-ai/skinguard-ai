@@ -5,7 +5,12 @@
 //  Collect skin type because model performance varies across it.
 // ═══════════════════════════════════════════════════════════════
 
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
@@ -27,6 +32,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int? _age;
   int? _fitzpatrick;
   String _notes = '';
+  String? _profileImagePath;
   
   bool _loading = true;
   bool _saving = false;
@@ -55,6 +61,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     final user = await DatabaseService.instance.getUserById(userId);
+    final prefs = await SharedPreferences.getInstance();
+    final picPath = prefs.getString('profile_pic_$userId');
+    
     if (user != null && mounted) {
       setState(() {
         _name = user['full_name'] as String? ?? '';
@@ -63,6 +72,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _age = user['age'] as int?;
         _fitzpatrick = user['fitzpatrick'] as int?;
         _notes = user['notes'] as String? ?? '';
+        _profileImagePath = picPath;
         _loading = false;
       });
     }
@@ -107,6 +117,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Future<void> _pickImage() async {
+    final userId = AuthService.instance.currentUserId;
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cannot upload picture in guest mode')),
+      );
+      return;
+    }
+
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery);
+    if (picked == null) return;
+
+    final appDir = await getApplicationDocumentsDirectory();
+    final profileDir = Directory(p.join(appDir.path, 'profiles'));
+    if (!await profileDir.exists()) await profileDir.create(recursive: true);
+
+    final ext = p.extension(picked.path);
+    final newPath = p.join(profileDir.path, 'user_$userId${DateTime.now().millisecondsSinceEpoch}$ext');
+    
+    final savedFile = await File(picked.path).copy(newPath);
+    
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('profile_pic_$userId', savedFile.path);
+
+    if (mounted) {
+      setState(() => _profileImagePath = savedFile.path);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -141,7 +181,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   CircleAvatar(
                     radius: 50,
                     backgroundColor: AppTheme.filmSoft,
-                    child: Icon(Icons.person, size: 50, color: AppTheme.slate),
+                    backgroundImage: _profileImagePath != null && File(_profileImagePath!).existsSync() 
+                        ? FileImage(File(_profileImagePath!)) 
+                        : null,
+                    child: _profileImagePath == null || !File(_profileImagePath!).existsSync()
+                        ? Icon(Icons.person, size: 50, color: AppTheme.slate)
+                        : null,
                   ),
                   Positioned(
                     right: 0,
@@ -151,7 +196,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       backgroundColor: AppTheme.aperture,
                       child: IconButton(
                         icon: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
-                        onPressed: () {},
+                        onPressed: isGuest ? null : _pickImage,
                         padding: EdgeInsets.zero,
                       ),
                     ),
