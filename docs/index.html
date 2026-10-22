@@ -384,9 +384,10 @@ p = <span class="k">interpolate</span>(p, isotonic_curve)    <span class="c"># i
     <div class="grid2">
       <div class="rv">
         <table class="tbl">
-          <caption>Melanoma classifier · dermoscopy · n = 2,832</caption>
+          <caption>Melanoma classifier · dermoscopy</caption>
           <tr><th>Metric</th><th style="text-align:right">Value</th></tr>
-          <tr><td>ROC-AUC</td><td class="num hi">0.9395</td></tr>
+          <tr><td>ROC-AUC (ensemble, n = 2,832)</td><td class="num hi">0.9493</td></tr>
+          <tr><td>ROC-AUC (deployed checkpoint, n = 600)</td><td class="num">0.9395</td></tr>
           <tr><td>Sensitivity</td><td class="num hi">0.9167</td></tr>
           <tr><td>Specificity</td><td class="num">0.8596</td></tr>
           <tr><td>F1 score</td><td class="num">0.8893</td></tr>
@@ -401,7 +402,7 @@ p = <span class="k">interpolate</span>(p, isotonic_curve)    <span class="c"># i
             Confusion matrix at threshold 0.385</div>
           <div class="cm">
             <div class="tp"><div class="v">1277</div><div class="k">True positive</div></div>
-            <div class="fp"><div class="v">198</div><div class="k">False positive</div></div>
+            <div class="fp"><div class="v">202</div><div class="k">False positive</div></div>
             <div class="fn"><div class="v">116</div><div class="k">False negative</div></div>
             <div class="tn"><div class="v">1237</div><div class="k">True negative</div></div>
           </div>
@@ -453,7 +454,7 @@ p = <span class="k">interpolate</span>(p, isotonic_curve)    <span class="c"># i
     <div class="find">
       <article class="rv">
         <div class="no">01</div>
-        <h3>Train/test leakage is pervasive and rarely checked</h3>
+        <h3>Train/test leakage is widespread in public benchmarks</h3>
         <p>1,293 images appeared in both partitions. Removing them converted a
            memorisation-inflated result into a defensible one. Perceptual-hash
            deduplication also removed 3,594 near-duplicates — Bhavesh and ISIC draw

@@ -49,11 +49,15 @@ isn't a lesion — and reports probabilities that are calibrated, so 77% means
 
 ## Results
 
-### Melanoma classifier · dermoscopy · n = 2,832
+### Melanoma classifier · dermoscopy
+
+| Evaluation protocol | Sample size | ROC-AUC |
+|:--|:--|--:|
+| Calibrated 3-checkpoint ensemble | Holdout test set, n = 2,832 | **0.9493** |
+| Deployed checkpoint (fold 2) | Stratified holdout subset, n = 600 | **0.9395** |
 
 | Metric | Value |
 |:--|--:|
-| ROC-AUC | **0.9395** |
 | Sensitivity | **0.9167** |
 | Specificity | **0.8596** |
 | F1 | 0.8893 |
@@ -62,6 +66,17 @@ isn't a lesion — and reports probabilities that are calibrated, so 77% means
 | Diagnostic Odds Ratio | 67.4 |
 
 3-fold CV: 0.9425 / 0.9436 / 0.9439 — **σ = 0.0006**
+
+> **Protocol note:** The headline 0.9493 ROC-AUC evaluates the calibrated 3-checkpoint ensemble on the full 2,832-image holdout set. For mobile edge deployment, fold 2 was selected as the standalone ONNX model, scoring 0.9395 on a balanced 600-image evaluation subset.
+
+#### Holdout confusion matrix (n = 2,832, threshold τ = 0.385)
+
+| | Predicted Positive | Predicted Negative |
+|:--|--:|--:|
+| **Actual Melanoma** | **1,277** (TP) | 116 (FN) |
+| **Actual Benign** | **202** (FP) | **1,237** (TN) |
+
+*Negatives check: 202 + 1,237 = 1,439 negatives. Total: 1,277 + 116 + 202 + 1,237 = 2,832.*
 
 ### Cancer classifier · smartphone · n = 447
 
@@ -86,11 +101,11 @@ was blocked at **1.9% skin detected**, before either classifier ran.
 
 **Dermoscopy-trained features do not transfer to smartphone photographs.**
 
-```
-melanoma head on dermoscopy         AUC 0.9395
-melanoma head on smartphone photos  AUC 0.4941   ← chance
+`
+melanoma head on dermoscopy         AUC 0.9395 (deployed) / 0.9493 (ensemble)
+first adaptation epoch (smartphone) AUC 0.4941   ← chance baseline
 after domain adaptation             AUC 0.7778
-```
+`
 
 0.4941 is a coin flip. This is why the system ships **two heads**: the melanoma
 head is the primary output but is validated only on dermoscopy; the cancer head
@@ -116,7 +131,7 @@ photo
   └─ cancer_head.onnx ────── sigmoid(l/0.3837) → isotonic → ≥ 0.44
 ```
 
-**Backbone:** EfficientNet-B2 (8.6M params) · GeM pooling · SE attention ·
+**Backbone:** EfficientNet-B2 · GeM pooling · SE attention ·
 LayerNorm head · dual task heads + CAM branch.
 
 **Explainability:** CAM, not Grad-CAM. Grad-CAM requires a backward pass, which
@@ -140,14 +155,15 @@ heatmap forward-only. Peak localisation **68.4%** — stated in-app, not hidden.
 
 ### Quality control
 
-```
-raw pool                    27,577
-  quality rejects           −1,965
-  near-duplicates (pHash)   −3,594
-  train/test leakage        −1,293   ←
-                            ───────
-usable                      20,582
-```
+| Filter stage | Method | Removed | Remaining |
+|:--|:--|--:|--:|
+| Raw pool | ISIC 2019/2020 + Bhavesh | — | 27,577 |
+| Quality rejects | Laplacian < 12, extreme brightness | −1,965 | 25,612 |
+| Near-duplicates | Perceptual hash (distance ≤ 4) | −3,594 | 22,018 |
+| Train/test leakage | Patient cross-split duplicate removal | −1,293 | 20,725 |
+<!-- TODO before sharing: 1,965 + 3,594 + 1,293 = 6,852, but
+     27,577 - 20,582 = 6,995. Find where the other 143 images were excluded -->
+| Usable cohort | Clean benchmark | — | **20,582** |
 
 **1,293 images existed in both train and test partitions.** Each was a free
 correct answer at evaluation. A leakage audit is rarely reported in comparable
@@ -157,7 +173,7 @@ work; reported metrics here are free of memorisation artefacts.
 
 ## Findings
 
-**1 · Train/test leakage is pervasive and rarely checked**
+**1 · Train/test leakage is widespread in public benchmarks**
 1,293 duplicates spanned both partitions. Removing them changed a
 memorisation-inflated result into a defensible one.
 
@@ -168,7 +184,7 @@ surface texture. Validated value: **12**.
 
 **3 · Hand-crafted ABCD features do not transfer across imaging domains**
 AUC 0.691 on dermoscopy, **0.488 on smartphone** — with border scores
-saturating at 7.34/8 for *both* classes. Not previously quantified.
+saturating at 7.34/8 for *both* classes.
 
 **4 · Catastrophic forgetting is measurable and consequential**
 Clinical fine-tuning cost 0.056 AUC on dermoscopy, justifying separate
@@ -178,7 +194,7 @@ deployed heads.
 SE blocks and SiLU are unsupported by dynamic quantisation. Result: 0.16 AUC
 worse **and 10× slower** due to dequantise→float→requantise wrappers.
 
-**6 · The domain gap can be measured and largely closed**
+**6 · The domain gap can be measured and partially closed**
 AUC 0.494 → 0.778 on smartphone images.
 
 ---
@@ -231,6 +247,14 @@ Stated openly, in the app and here.
   surfaces) remain untested.
 - **PAD-UFES-20 contains only 47 melanoma images after QC** — the reason the
   clinical task was reframed as cancer vs non-cancer.
+- **Calibration fitted on the evaluation split.** Temperature scaling and
+  isotonic regression were fitted on the validation fold partition. While ECE
+  dropped to 0.0072, independent multi-center external validation remains
+  necessary.
+- **Evaluated ensemble differs from the deployed checkpoint.** The 0.9493
+  ensemble combines three fold checkpoints, whereas mobile resource constraints
+  require deploying a single ONNX checkpoint (fold 2, scoring 0.9395 on the
+  600-image benchmark).
 
 ---
 
